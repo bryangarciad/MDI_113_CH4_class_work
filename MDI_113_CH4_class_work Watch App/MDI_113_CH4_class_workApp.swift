@@ -11,7 +11,7 @@ import SwiftUI
 struct MDI_113_CH4_class_work_Watch_AppApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            DashboardView()
         }
     }
 }
