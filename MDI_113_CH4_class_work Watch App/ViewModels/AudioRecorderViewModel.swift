@@ -40,8 +40,58 @@ class AudioRecorderViewModel: ObservableObject {
     private var recordingStartTime: Date?
     
     init() {
-        // TODO: create a func so that when you re open the app we pull all recording from the user documents that are prefixed with superCoolVoiceMemoApp_recording
+        loadRecordings()
     }
+    
+    func loadRecordings() {
+        let fileManager = FileManager.default
+        let documentsURL: URL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0] // urls -> ["user/documents/.."]
+        
+        do {
+            let filesURLs = try fileManager.contentsOfDirectory(
+                at: documentsURL,
+                includingPropertiesForKeys: [.creationDateKey],
+                options: .skipsHiddenFiles
+            )
+            
+            let recordingFiles = filesURLs.filter { url in
+                // alexd/documents/superCoolVoiceMemoApp_recording_57684645745786487.m4a
+                url.lastPathComponent.hasPrefix("superCoolVoiceMemoApp_recording_") && url.pathExtension == "m4a"
+            }
+            
+            var loadedRecordings: [Recording] = []
+            
+            for fileURL in recordingFiles {
+                let attributes = try fileManager.attributesOfItem(atPath: fileURL.path)
+                let recordedDate = attributes[.creationDate] as? Date ?? Date()
+                
+                let duration: TimeInterval
+                
+                do {
+                    let audioPlayer = try AVAudioPlayer(contentsOf: fileURL)
+                    duration = audioPlayer.duration
+                } catch {
+                    duration = 0
+                }
+                
+                let recording =  Recording(
+                    url: fileURL,
+                    duration: duration,
+                    recordedDate: recordedDate
+                )
+                
+                loadedRecordings.append(recording)
+            }
+            
+            // sort by date newest first
+            recordings = loadedRecordings.sorted { $0.recordedDate > $1.recordedDate }
+        } catch {
+            errorMessage = "Failed to load recordings."
+        }
+        
+    }
+
+
     
     // MARK: - Permission
     func checkPermission() {
