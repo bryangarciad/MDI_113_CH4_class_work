@@ -44,7 +44,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"MDI-113-CH4-class-work-Watch-App-Info.plist",
-				ViewModels/HeartRateViewModel.swift,
 			);
 			target = BCE63ED42F4A26A900BD00E2 /* MDI_113_CH4_class_work Watch App */;
 		};

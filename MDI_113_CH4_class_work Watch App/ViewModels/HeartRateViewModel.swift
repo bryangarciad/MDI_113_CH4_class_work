@@ -11,7 +11,7 @@ class HeartRateViewModel: ObservableObject {
     
     // MARK: - Private Properties
     private let healthStore = HKHealthStore()
-    private let heartRateQuery: HKQuery?
+    private var heartRateQuery: HKQuery?
     
     private let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
     private let heartRateUnit = HKUnit.count().unitDivided(by: .minute()) // count is the quantity value divided by minute (Beats Per Minute BPMs)
@@ -20,7 +20,7 @@ class HeartRateViewModel: ObservableObject {
         checkAuthorizationStatus()
     }
     
-    deinit() {
+    deinit {
         stopMonitoring()
     }
     
@@ -35,14 +35,14 @@ class HeartRateViewModel: ObservableObject {
         
         switch status {
         case .notDetermined:
-            authorizationStatus = "Not Determined"
+            self.authorizationStatus = "Not Determined"
         case .sharingDenied:
-            authorizationStatus = "Denied"
+            self.authorizationStatus = "Denied"
             errorMessage = "Pleas enable heart rate in settings to access this feature"
         case .sharingAuthorized:
-            authorizationStatus = "Authorized"
+            self.authorizationStatus = "Authorized"
         @unknown default:
-            authorizationStatus = "Unknown"
+            self.authorizationStatus = "Unknown"
         }
     }
     
@@ -53,6 +53,8 @@ class HeartRateViewModel: ObservableObject {
         }
         
         healthStore.requestAuthorization(toShare: nil, read: [heartRateType]) { [weak self] success, error in
+            guard let self = self else { return }
+            
             DispatchQueue.main.async {
                 if success {
                     self.authorizationStatus = "Authorized"
@@ -77,27 +79,35 @@ class HeartRateViewModel: ObservableObject {
             anchor: nil,
             limit: HKObjectQueryNoLimit
         ) { [weak self] query, samples, deletedObjects, anchor, error in
-            guard let samples = samples as? [HKQuantitySample], let sample = samples.last else { // two checks first check that samples is not empty or nil, second check verify that the sample size > 1
-                if let error = error {
-                    DispatchQueue.main.async {
-                        self.errorMessage = "Error while getting the samples"
-                    }
-                }
-                return
-            }
-            
-            let heartRate = sample.quantity.doubleValue(for: self.heartRateUnit) // double represented in bpms
-            
-            DispatchQueue.main.async {
-                self.currentHearthRate = Int(heartRate)
-                self.errorMessage = nil
-            }
-            
+            self?.processSamples(samples: samples, error: error)
+        }
+        
+        query.updateHandler = { [weak self] query, samples, deletedObjects, anchor, error in
+            self?.processSamples(samples: samples, error: error)
         }
         
         heartRateQuery = query
         healthStore.execute(query)
         isMonitoring = true
+    }
+    
+    private func processSamples(samples: [HKSample]?, error: Error?) {
+        guard let samples = samples as? [HKQuantitySample], let sample = samples.last else {
+            
+            if let error = error {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Error while getting the samples"
+                }
+            }
+            return
+        }
+        
+        let heartRate = sample.quantity.doubleValue(for: self.heartRateUnit) // double represented in bpms
+        
+        DispatchQueue.main.async {
+            self.currentHearthRate = Int(heartRate)
+            self.errorMessage = nil
+        }
     }
     
     func stopMonitoring() {
