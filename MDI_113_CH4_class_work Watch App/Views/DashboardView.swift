@@ -15,6 +15,14 @@ struct DashboardView: View {
                             gradientColors: [.blue, .cyan]
                         )
                     }
+                    NavigationLink(destination: HeartRateView()) {
+                        DashboardCard(
+                            icon: "heart.fill",
+                            title: "Heart Rate",
+                            subtitle: "Track heartrate Data",
+                            gradientColors: [.red, .white]
+                        )
+                    }
                 }
             }
         }
